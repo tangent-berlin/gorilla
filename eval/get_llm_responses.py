@@ -6,9 +6,10 @@ import anthropic
 import multiprocessing as mp
 import time
 
+
 def encode_question(question, api_name):
     """Encode multiple prompt instructions into a single string."""
-    
+
     prompts = []
     if api_name == "torchhub":
         domains = "1. $DOMAIN is inferred from the task description and should include one of {Classification, Semantic Segmentation, Object Detection, Audio Separation, Video Classification, Text-to-Speech}."
@@ -28,15 +29,28 @@ def encode_question(question, api_name):
     else:
         print("Error: API name is not supported.")
 
-    prompt = question + "\nWrite a python program in 1 to 2 lines to call API in " + api_name + ".\n\nThe answer should follow the format: <<<domain>>> $DOMAIN, <<<api_call>>>: $API_CALL, <<<api_provider>>>: $API_PROVIDER, <<<explanation>>>: $EXPLANATION, <<<code>>>: $CODE}. Here are the requirements:\n" + domains + "\n2. The $API_CALL should have only 1 line of code that calls api.\n3. The $API_PROVIDER should be the programming framework used.\n4. $EXPLANATION should be a step-by-step explanation.\n5. The $CODE is the python code.\n6. Do not repeat the format in your answer."
-    prompts.append({"role": "system", "content": "You are a helpful API writer who can write APIs based on requirements."})
+    prompt = (
+        question
+        + "\nWrite a python program in 1 to 2 lines to call API in "
+        + api_name
+        + ".\n\nThe answer should follow the format: <<<domain>>> $DOMAIN, <<<api_call>>>: $API_CALL, <<<api_provider>>>: $API_PROVIDER, <<<explanation>>>: $EXPLANATION, <<<code>>>: $CODE}. Here are the requirements:\n"
+        + domains
+        + "\n2. The $API_CALL should have only 1 line of code that calls api.\n3. The $API_PROVIDER should be the programming framework used.\n4. $EXPLANATION should be a step-by-step explanation.\n5. The $CODE is the python code.\n6. Do not repeat the format in your answer."
+    )
+    prompts.append(
+        {
+            "role": "system",
+            "content": "You are a helpful API writer who can write APIs based on requirements.",
+        }
+    )
     prompts.append({"role": "user", "content": prompt})
     return prompts
+
 
 def get_response(get_response_input, api_key):
     question, question_id, api_name, model = get_response_input
     question = encode_question(question, api_name)
-    
+
     try:
         if "gpt" in model:
             openai.api_key = api_key
@@ -46,7 +60,7 @@ def get_response(get_response_input, api_key):
                 n=1,
                 temperature=0,
             )
-            response = responses['choices'][0]['message']['content']
+            response = responses["choices"][0]["message"]["content"]
         elif "claude" in model:
             client = anthropic.Client(api_key)
             responses = client.completion(
@@ -61,14 +75,24 @@ def get_response(get_response_input, api_key):
     except Exception as e:
         print("Error:", e)
         return None
-        
-    print("=>",)
-    return {'text': response, "question_id": question_id, "answer_id": "None", "model_id": model, "metadata": {}}
+
+    print(
+        "=>",
+    )
+    return {
+        "text": response,
+        "question_id": question_id,
+        "answer_id": "None",
+        "model_id": model,
+        "metadata": {},
+    }
+
 
 def process_entry(entry, api_key):
     question, question_id, api_name, model = entry
     result = get_response((question, question_id, api_name, model), api_key)
     return result
+
 
 def write_result_to_file(result, output_file):
     global file_write_lock
@@ -77,24 +101,48 @@ def write_result_to_file(result, output_file):
             json.dump(result, outfile)
             outfile.write("\n")
 
+
 def callback_with_lock(result, output_file):
     global file_write_lock
     write_result_to_file(result, output_file, file_write_lock)
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     parser = argparse.ArgumentParser()
-    parser.add_argument("--model", type=str, default=None, help="which model you want to use for eval, only support ['gpt*', 'claude*'] now")
-    parser.add_argument("--api_key", type=str, default=None, help="the api key provided for calling")
-    parser.add_argument("--output_file", type=str, default=None, help="the output file this script writes to")
-    parser.add_argument("--question_data", type=str, default=None, help="path to the questions data file")
-    parser.add_argument("--api_name", type=str, default=None, help="this will be the api dataset name you are testing, only support ['torchhub', 'tensorhun', 'huggingface'] now")
+    parser.add_argument(
+        "--model",
+        type=str,
+        default=None,
+        help="which model you want to use for eval, only support ['gpt*', 'claude*'] now",
+    )
+    parser.add_argument(
+        "--api_key", type=str, default=None, help="the api key provided for calling"
+    )
+    parser.add_argument(
+        "--output_file",
+        type=str,
+        default=None,
+        help="the output file this script writes to",
+    )
+    parser.add_argument(
+        "--question_data",
+        type=str,
+        default=None,
+        help="path to the questions data file",
+    )
+    parser.add_argument(
+        "--api_name",
+        type=str,
+        default=None,
+        help="this will be the api dataset name you are testing, only support ['torchhub', 'tensorhun', 'huggingface'] now",
+    )
     args = parser.parse_args()
 
     start_time = time.time()
     # Read the question file
     questions = []
     question_ids = []
-    with open(args.question_data, 'r') as f:
+    with open(args.question_data, "r") as f:
         for idx, line in enumerate(f):
             questions.append(json.loads(line)["text"])
             question_ids.append(json.loads(line)["question_id"])

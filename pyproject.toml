@@ -1,0 +1,37 @@
+[tool.poetry]
+name = "gorilla"
+version = "0.1.0"
+description = "Gorilla Poetry Fork"
+license = "MIT"
+authors = ["Tangent <contact@tangent.berlin>"]
+readme = "README.md"
+include = ["README.md", "CHANGELOG.md", "data"]
+packages = [{ include = "eval" }, { include = "inference" }]
+
+[tool.poetry.dependencies]
+python = "^3.11"
+openai = "*"
+anthropic = "*"
+tree_sitter = "*"
+
+[tool.poetry.dev-dependencies]
+ipython = "*"
+poetry-dynamic-versioning = "^0.22.0"
+black = { extras = ["jupyter"], version = "^23.3.0" }
+mypy = "0.910"
+dunamai = "^1.7.0"
+commitizen = "^2.20.3"
+
+[tool.poetry.group.inference.dependencies]
+transformers = "4.28.1"
+huggingface-hub = "0.14.1"
+torch = "2.0.1"
+tqdm = "4.65.0"
+prompt_toolkit = "3.0.38"
+sentencepiece = "0.1.99"
+accelerate = "0.19.0"
+
+[tool.poetry-dynamic-versioning]
+enable = true
+style = "pep440"
+pattern = "^(?P<base>\\d+\\.\\d+\\.\\d+)"
